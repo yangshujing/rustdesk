@@ -245,6 +245,8 @@ enum ShareLevel {
 
   const ShareLevel(this.value);
   final int value;
+
+  static String teamName = translate('Everyone');
 }
 
 class AbProfile {
@@ -280,12 +282,14 @@ class AbRulePayload {
   int level;
   String name;
   int rule;
+  String? group;
 
-  AbRulePayload(this.guid, this.level, this.name, this.rule);
+  AbRulePayload(this.guid, this.level, this.name, this.rule, {this.group});
 
   AbRulePayload.fromJson(Map<String, dynamic> json)
       : guid = json['guid'] ?? '',
         level = json['level'] ?? 0,
         name = json['name'] ?? '',
-        rule = json['rule'] ?? 0;
+        rule = json['rule'] ?? 0,
+        group = json['group'];
 }

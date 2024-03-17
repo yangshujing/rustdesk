@@ -971,12 +971,13 @@ class __RuleTreeState extends State<_RuleTree> {
   List<AbRulePayload> rules = [];
   bool isInProgress = false;
   double totalWidth = isDesktop ? 400.0 : 180.0;
-  double col1Width = isDesktop ? 270.0 : 100.0;
+  double col1Width = isDesktop ? 300.0 : 100.0;
   double col2Width = 30.0;
   double indent = isDesktop ? 40.0 : 12.0;
   double iconSize = isDesktop ? 24.0 : 12.0;
   double iconButtonSize = 24.0;
   bool onlyShowExisting = false;
+  String searchText = '';
   TextStyle? textStyle = isDesktop ? null : TextStyle(fontSize: 12);
 
   @override
@@ -1002,11 +1003,19 @@ class __RuleTreeState extends State<_RuleTree> {
     });
   }
 
+  bool match(String name) {
+    return searchText.isEmpty ||
+        name.toLowerCase().contains(searchText.toLowerCase());
+  }
+
   List<TreeNode> getNodes() {
     int keyIndex = 0;
     List<TreeNode> buildUserNodes(List<String> users) {
       List<TreeNode> userNodes = [];
       for (var user in users) {
+        if (!match(user)) {
+          continue;
+        }
         final userRuleIndex = rules.indexWhere(
             (e) => e.level == ShareLevel.user.value && e.name == user);
         if (userRuleIndex < 0) {
@@ -1033,6 +1042,9 @@ class __RuleTreeState extends State<_RuleTree> {
       final groupRuleIndex = rules.indexWhere(
           (e) => e.level == ShareLevel.group.value && e.name == group);
       final children = buildUserNodes(users);
+      if (!match(group) && children.isEmpty) {
+        return;
+      }
       if (groupRuleIndex < 0) {
         if (!onlyShowExisting || children.isNotEmpty) {
           groupNodes.add(TreeNode(
@@ -1053,11 +1065,14 @@ class __RuleTreeState extends State<_RuleTree> {
     List<TreeNode> totalNodes = [];
     final teamRuleIndex =
         rules.indexWhere((e) => e.level == ShareLevel.team.value);
+    if (!match(ShareLevel.teamName) && groupNodes.isEmpty) {
+      return [];
+    }
     if (teamRuleIndex < 0) {
       if (!onlyShowExisting || groupNodes.isNotEmpty) {
         totalNodes.add(TreeNode(
             content: _buildEmptyNodeContent(
-                ShareLevel.team, translate('Everyone'), totalWidth, 0),
+                ShareLevel.team, ShareLevel.teamName, totalWidth, 0),
             key: ValueKey(keyIndex++),
             children: groupNodes));
       }
@@ -1066,7 +1081,7 @@ class __RuleTreeState extends State<_RuleTree> {
       totalNodes.add(TreeNode(
           content: _buildRuleNodeContent(
               AbRulePayload(
-                  rule.guid, rule.level, translate('Everyone'), rule.rule),
+                  rule.guid, rule.level, ShareLevel.teamName, rule.rule),
               totalWidth,
               0),
           key: ValueKey(keyIndex++),
@@ -1082,8 +1097,6 @@ class __RuleTreeState extends State<_RuleTree> {
       children: [
         Row(
           children: [
-            const Spacer(),
-            _text(translate('Only show existing')),
             Switch(
                 value: onlyShowExisting,
                 onChanged: (v) {
@@ -1092,7 +1105,26 @@ class __RuleTreeState extends State<_RuleTree> {
                     bind.setLocalFlutterOption(
                         k: 'only-show-existing-rules', v: v ? 'Y' : '');
                   });
-                })
+                }),
+            _text(translate('Only show existing')).marginOnly(right: 20),
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: translate('Search'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  prefixIcon: Icon(Icons.search),
+                  filled: true,
+                ),
+                onChanged: (v) {
+                  setState(() {
+                    searchText = v;
+                  });
+                },
+              ).marginSymmetric(horizontal: 10),
+            ),
           ],
         ),
         SingleChildScrollView(
@@ -1108,7 +1140,7 @@ class __RuleTreeState extends State<_RuleTree> {
           ),
         ),
         // NOT use Offstage to wrap LinearProgressIndicator
-        isInProgress ? const LinearProgressIndicator() : Offstage()
+        isInProgress ? const LinearProgressIndicator() : Offstage(),
       ],
     );
   }
@@ -1277,7 +1309,9 @@ void _addOrUpdateRuleDialog(
               initialSelection: initialRule,
               onSelected: (value) {
                 if (value != null) {
-                  currentRule = value;
+                  setState(() {
+                    currentRule = value;
+                  });
                 }
               },
               dropdownMenuEntries: keys
@@ -1289,15 +1323,16 @@ void _addOrUpdateRuleDialog(
               enableFilter: false,
               controller: controller,
             ),
-            Row(
-              children: [
-                Icon(Icons.warning_amber, color: Colors.amber)
-                    .marginOnly(right: 10),
-                Flexible(
-                    child: Text(translate('full-control-tip'),
-                        style: TextStyle(fontSize: 12))),
-              ],
-            ).marginSymmetric(vertical: 10),
+            if (currentRule == ShareRule.fullControl.value)
+              Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.amber)
+                      .marginOnly(right: 10),
+                  Flexible(
+                      child: Text(translate('full-control-tip'),
+                          style: TextStyle(fontSize: 12))),
+                ],
+              ).marginSymmetric(vertical: 10),
           ],
         ),
         actions: [
