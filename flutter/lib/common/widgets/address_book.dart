@@ -971,11 +971,11 @@ class __RuleTreeState extends State<_RuleTree> {
   List<AbRulePayload> rules = [];
   bool isInProgress = false;
   double totalWidth = isDesktop ? 400.0 : 180.0;
-  double col1Width = isDesktop ? 200.0 : 100.0;
-  double col2Width = isDesktop ? 100.0 : 30.0;
+  double col1Width = isDesktop ? 270.0 : 100.0;
+  double col2Width = 30.0;
   double indent = isDesktop ? 40.0 : 12.0;
   double iconSize = isDesktop ? 24.0 : 12.0;
-  double iconButtonSize = isDesktop ? 24.0 : 24.0;
+  double iconButtonSize = 24.0;
   bool onlyShowExisting = false;
   TextStyle? textStyle = isDesktop ? null : TextStyle(fontSize: 12);
 
