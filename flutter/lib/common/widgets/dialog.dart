@@ -1939,7 +1939,11 @@ void addPeersToAbDialog(
         return;
       }
       isInProgress.value = true;
-      final errMsg = await gFFI.abModel.addPeersTo(peers, currentName.value);
+      final addToPersonal =
+          gFFI.abModel.addressbooks[currentName.value]?.isPersonal();
+      final syncPasswordOrHash = addToPersonal ?? false;
+      final errMsg = await gFFI.abModel
+          .addPeersTo(peers, currentName.value, syncPasswordOrHash);
       isInProgress.value = false;
       if (errMsg == null) {
         showToast(translate('Successful'));

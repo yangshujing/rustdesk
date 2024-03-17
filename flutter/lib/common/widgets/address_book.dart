@@ -544,11 +544,13 @@ class _AddressBookState extends State<AddressBook> {
               height: 4.0,
             ),
             if (!gFFI.abModel.current.isPersonal())
-              Container(
-                  child: Text(
-                translate('share-warning-tip'),
-                style: TextStyle(fontSize: 12),
-              )).marginSymmetric(vertical: 10),
+              Row(children: [
+                Icon(Icons.info, color: Colors.amber).marginOnly(right: 4),
+                Text(
+                  translate('share-warning-tip'),
+                  style: TextStyle(fontSize: 12),
+                )
+              ]).marginSymmetric(vertical: 10),
             // NOT use Offstage to wrap LinearProgressIndicator
             if (isInProgress) const LinearProgressIndicator(),
           ],
@@ -1092,41 +1094,57 @@ class __RuleTreeState extends State<_RuleTree> {
 
   @override
   Widget build(BuildContext context) {
+    Widget switchWidget = Switch(
+        value: onlyShowExisting,
+        onChanged: (v) {
+          setState(() {
+            onlyShowExisting = v;
+            bind.setLocalFlutterOption(
+                k: 'only-show-existing-rules', v: v ? 'Y' : '');
+          });
+        });
+    Widget switchLabel =
+        _text(translate('Only show existing')).marginOnly(right: 20);
+    Widget searchTextField = Expanded(
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: translate('Search'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          prefixIcon: Icon(Icons.search),
+          filled: true,
+        ),
+        onChanged: (v) {
+          setState(() {
+            searchText = v;
+          });
+        },
+      ).marginSymmetric(horizontal: 10),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            Switch(
-                value: onlyShowExisting,
-                onChanged: (v) {
-                  setState(() {
-                    onlyShowExisting = v;
-                    bind.setLocalFlutterOption(
-                        k: 'only-show-existing-rules', v: v ? 'Y' : '');
-                  });
-                }),
-            _text(translate('Only show existing')).marginOnly(right: 20),
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: translate('Search'),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+        isDesktop
+            ? Row(
+                children: [
+                  switchWidget,
+                  switchLabel,
+                  searchTextField,
+                ],
+              )
+            : Column(
+                children: [
+                  Row(
+                    children: [
+                      switchWidget,
+                      switchLabel,
+                    ],
                   ),
-                  prefixIcon: Icon(Icons.search),
-                  filled: true,
-                ),
-                onChanged: (v) {
-                  setState(() {
-                    searchText = v;
-                  });
-                },
-              ).marginSymmetric(horizontal: 10),
-            ),
-          ],
-        ),
+                  searchTextField,
+                ],
+              ),
         SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: SingleChildScrollView(

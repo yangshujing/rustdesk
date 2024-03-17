@@ -520,22 +520,23 @@ class AbModel {
       'alias': alias,
       'tags': tags,
     });
-    if (password.isNotEmpty) {
-      peer.password = password;
-    }
+    peer.password = password;
     _mergePeerFromGroup(peer);
-    final ret = await addPeersTo([peer], _currentName.value);
+    final syncPasswordOrHash = !current.isPersonal();
+    final ret =
+        await addPeersTo([peer], _currentName.value, syncPasswordOrHash);
     _timerCounter = 0;
     return ret;
   }
 
-  Future<String?> addPeersTo(List<Peer> ps, String name) async {
+  Future<String?> addPeersTo(
+      List<Peer> ps, String name, bool syncPasswordOrHash) async {
     final ab = addressbooks[name];
     if (ab == null) {
       return 'no such addressbook: $name';
     }
     final ps2 = ps.map((e) => Peer.copy(e)).toList();
-    String? errMsg = await ab.addPeers(ps2);
+    String? errMsg = await ab.addPeers(ps2, syncPasswordOrHash);
     await pullNonLegacyAfterChange(name: name);
     if (name == _currentName.value) {
       _refreshTab();
@@ -741,7 +742,7 @@ class AbModel {
         "tags": value.tags,
         "peers": value.peers
             .map((e) => value.isPersonal()
-                ? e.toPersonalAbUploadJson()
+                ? e.toPersonalAbUploadJson(true)
                 : e.toSharedAbCacheJson())
             .toList(),
         "tag_colors": jsonEncode(value.tagColors)
@@ -967,7 +968,7 @@ abstract class BaseAb {
 
   Future<void> pullAbImpl({force = true, quiet = false});
 
-  Future<String?> addPeers(List<Peer> ps);
+  Future<String?> addPeers(List<Peer> ps, bool syncPassword);
 
   Future<bool> changeTagForPeers(List<String> ids, List<dynamic> tags);
 
@@ -992,7 +993,8 @@ abstract class BaseAb {
   Future<bool> deleteTag(String tag);
 
   bool isFull(bool warn) {
-    final res = gFFI.abModel.licensedDevices > 0 &&
+    bool res;
+    res = gFFI.abModel.licensedDevices > 0 &&
         peers.length >= gFFI.abModel.licensedDevices;
     if (res && warn) {
       BotToast.showText(
@@ -1143,7 +1145,7 @@ class LegacyAb extends BaseAb {
 
 // #region Peer
   @override
-  Future<String?> addPeers(List<Peer> ps) async {
+  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
     bool full = false;
     for (var p in ps) {
       if (!isFull(false)) {
@@ -1331,7 +1333,8 @@ class LegacyAb extends BaseAb {
 // #endregion
 
   Map<String, dynamic> _serialize() {
-    final peersJsonData = peers.map((e) => e.toPersonalAbUploadJson()).toList();
+    final peersJsonData =
+        peers.map((e) => e.toPersonalAbUploadJson(true)).toList();
     final tagColorJsonData = jsonEncode(tagColors);
     return {
       "tags": tags,
@@ -1538,7 +1541,7 @@ class Ab extends BaseAb {
 
 // #region Peers
   @override
-  Future<String?> addPeers(List<Peer> ps) async {
+  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
     try {
       final api =
           "${await bind.mainGetApiServer()}/api/ab/peer/add/${profile.guid}";
@@ -1551,13 +1554,14 @@ class Ab extends BaseAb {
         if (isFull(false)) {
           return translate("exceed_max_devices");
         }
-        // deal with password/hash
+        String body;
         if (personal) {
           p.password = '';
+          body = jsonEncode(p.toPersonalAbUploadJson(syncPassword));
         } else {
           p.hash = '';
+          body = jsonEncode(p.toSharedAbUploadJson(syncPassword));
         }
-        final body = jsonEncode(p.toSharedAbUploadJson());
         final resp =
             await http.post(Uri.parse(api), headers: headers, body: body);
         final errMsg = _jsonDecodeActionResp(resp);
@@ -1689,7 +1693,8 @@ class Ab extends BaseAb {
         for (var r in recents) {
           if (peers.length < gFFI.abModel._maxPeerOneAb) {
             if (peers.every((e) => e.id != r.id)) {
-              var err = await addPeers([r]);
+              // only sync personal password
+              var err = await addPeers([r], personal);
               if (err == null) {
                 peers.add(r);
                 uiUpdate = true;
@@ -1849,7 +1854,7 @@ class Ab extends BaseAb {
 // DummyAb is for current ab is null
 class DummyAb extends BaseAb {
   @override
-  Future<String?> addPeers(List<Peer> ps) async {
+  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
     return "Unreachable";
   }
 

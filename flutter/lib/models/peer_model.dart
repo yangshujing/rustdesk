@@ -61,28 +61,34 @@ class Peer {
     };
   }
 
-  Map<String, dynamic> toPersonalAbUploadJson() {
-    return <String, dynamic>{
+  Map<String, dynamic> toPersonalAbUploadJson(bool includingHash) {
+    var res = <String, dynamic>{
       "id": id,
-      "hash": hash,
       "username": username,
       "hostname": hostname,
       "platform": platform,
       "alias": alias,
       "tags": tags,
     };
+    if (includingHash) {
+      res['hash'] = hash;
+    }
+    return res;
   }
 
-  Map<String, dynamic> toSharedAbUploadJson() {
-    return <String, dynamic>{
+  Map<String, dynamic> toSharedAbUploadJson(bool includingPassword) {
+    var res = <String, dynamic>{
       "id": id,
       "username": username,
       "hostname": hostname,
       "platform": platform,
       "alias": alias,
       "tags": tags,
-      "password": password,
     };
+    if (includingPassword) {
+      res['password'] = password;
+    }
+    return res;
   }
 
   Map<String, dynamic> toSharedAbCacheJson() {
