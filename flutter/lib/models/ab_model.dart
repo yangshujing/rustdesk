@@ -347,23 +347,53 @@ class AbModel {
       if (abGuid == null) {
         return res;
       }
-      final api = "${await bind.mainGetApiServer()}/api/ab/rules/$abGuid";
+      final api = "${await bind.mainGetApiServer()}/api/ab/rules";
+      var uri0 = Uri.parse(api);
       var headers = getHttpHeaders();
       headers['Content-Type'] = "application/json";
-      final resp = await http.post(Uri.parse(api), headers: headers);
-      if (resp.statusCode == 404) {
-        debugPrint("HTTP 404, api server doesn't support shared address book");
-        return res;
-      }
-      List<dynamic> json =
-          _jsonDecodeRespList(utf8.decode(resp.bodyBytes), resp.statusCode);
-      if (resp.statusCode != 200) {
-        throw 'HTTP ${resp.statusCode}';
-      }
-      for (final d in json) {
-        final t = AbRulePayload.fromJson(d);
-        res.add(t);
-      }
+      final pageSize = 100;
+      var total = 0;
+      int currentPage = 0;
+      do {
+        currentPage += 1;
+        var uri = Uri(
+            scheme: uri0.scheme,
+            host: uri0.host,
+            path: uri0.path,
+            port: uri0.port,
+            queryParameters: {
+              'current': currentPage.toString(),
+              'pageSize': pageSize.toString(),
+              'ab': abGuid,
+            });
+        final resp = await http.post(uri, headers: headers);
+        Map<String, dynamic> json =
+            _jsonDecodeRespMap(utf8.decode(resp.bodyBytes), resp.statusCode);
+        if (resp.statusCode == 404) {
+          debugPrint(
+              "HTTP 404, api server doesn't support shared address book");
+          return res;
+        }
+        if (json.containsKey('error')) {
+          throw json['error'];
+        }
+
+        if (resp.statusCode != 200) {
+          throw 'HTTP ${resp.statusCode}';
+        }
+        if (json.containsKey('total')) {
+          if (total == 0) total = json['total'];
+          if (json.containsKey('data')) {
+            final data = json['data'];
+            if (data is List) {
+              for (final d in data) {
+                final t = AbRulePayload.fromJson(d);
+                res.add(t);
+              }
+            }
+          }
+        }
+      } while (currentPage * pageSize < total);
       return res;
     } catch (err) {
       debugPrint('get all rules err: ${err.toString()}');
