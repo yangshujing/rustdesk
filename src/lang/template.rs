@@ -603,9 +603,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Read-only", ""),
         ("Read/Write", ""),
         ("Full Control", ""),
-        ("full-control-tip", ""),
-        ("share-warning-tip", ""),
+        ("full_control_tip", ""),
+        ("share_warning_tip", ""),
         ("Only show existing", ""),
         ("Everyone", ""),
+        ("permission_priority_tip", ""),
     ].iter().cloned().collect();
 }

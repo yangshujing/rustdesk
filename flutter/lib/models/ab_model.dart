@@ -59,10 +59,11 @@ class AbModel {
 
   var _syncAllFromRecent = true;
   var _syncFromRecentLock = false;
-  var _resetting = false;
+  var _allInitialized = false;
   var _timerCounter = 0;
   var _cacheLoadOnceFlag = false;
   var _everPulledProfiles = false;
+  // ignore: unused_field
   var _maxPeerOneAb = 0;
 
   WeakReference<FFI> parent;
@@ -73,8 +74,7 @@ class AbModel {
       Timer.periodic(Duration(milliseconds: 500), (timer) async {
         if (_timerCounter++ % 6 == 0) {
           if (!gFFI.userModel.isLogin) return;
-          if (!allInitialized()) return;
-          if (_resetting) return;
+          if (!_allInitialized) return;
           _syncFromRecent();
         }
       });
@@ -83,14 +83,13 @@ class AbModel {
 
   reset() async {
     print("reset ab model");
-    _resetting = true;
+    _allInitialized = false;
     abProfiles.clear();
     addressbooks.clear();
     setCurrentName('');
     await bind.mainClearAb();
     licensedDevices = 0;
     _everPulledProfiles = false;
-    _resetting = false;
   }
 
 // #region ab
@@ -102,7 +101,8 @@ class AbModel {
   Future<void> _pullAb({force = true, quiet = false}) async {
     debugPrint("pullAb, force:$force, quiet:$quiet");
     if (!gFFI.userModel.isLogin) return;
-    if (!force && allInitialized()) return;
+    if (!force && _allInitialized) return;
+    _allInitialized = false;
     try {
       // Get personal address book guid
       _personalAbGuid = null;
@@ -146,6 +146,8 @@ class AbModel {
         }
       });
       _saveCache();
+      _allInitialized = true;
+      _syncAllFromRecent = true;
     } catch (e) {
       debugPrint("pullAb error: $e");
     }
@@ -153,7 +155,6 @@ class AbModel {
     if (!addressbooks.containsKey(_currentName.value)) {
       setCurrentName(_personalAddressBookName);
     }
-    _syncAllFromRecent = true;
   }
 
   Future<bool> _getAbSettings() async {
@@ -515,28 +516,30 @@ class AbModel {
     if (currentAbPeers.where((element) => element.id == id).isNotEmpty) {
       return "$id already exists in address book $_currentName";
     }
-    final peer = Peer.fromJson({
+    Map<String, dynamic> peer = {
       'id': id,
       'alias': alias,
       'tags': tags,
-    });
-    peer.password = password;
-    _mergePeerFromGroup(peer);
-    final syncPasswordOrHash = !current.isPersonal();
-    final ret =
-        await addPeersTo([peer], _currentName.value, syncPasswordOrHash);
+    };
+    // avoid set existing password to empty
+    if (password.isNotEmpty) {
+      peer['password'] = password;
+    }
+    final ret = await addPeersTo([peer], _currentName.value);
     _timerCounter = 0;
     return ret;
   }
 
+  // Use Map<String, dynamic> rather than Peer to distinguish between empty and null
   Future<String?> addPeersTo(
-      List<Peer> ps, String name, bool syncPasswordOrHash) async {
+    List<Map<String, dynamic>> ps,
+    String name,
+  ) async {
     final ab = addressbooks[name];
     if (ab == null) {
       return 'no such addressbook: $name';
     }
-    final ps2 = ps.map((e) => Peer.copy(e)).toList();
-    String? errMsg = await ab.addPeers(ps2, syncPasswordOrHash);
+    String? errMsg = await ab.addPeers(ps);
     await pullNonLegacyAfterChange(name: name);
     if (name == _currentName.value) {
       _refreshTab();
@@ -838,20 +841,6 @@ class AbModel {
     return str2color2(tag, existing: current.tagColors.values.toList());
   }
 
-  _mergePeerFromGroup(Peer p) {
-    final g = gFFI.groupModel.peers.firstWhereOrNull((e) => p.id == e.id);
-    if (g == null) return;
-    if (p.username.isEmpty) {
-      p.username = g.username;
-    }
-    if (p.hostname.isEmpty) {
-      p.hostname = g.hostname;
-    }
-    if (p.platform.isEmpty) {
-      p.platform = g.platform;
-    }
-  }
-
   List<String> addressBookNames() {
     return addressbooks.keys.toList();
   }
@@ -873,11 +862,6 @@ class AbModel {
 
   bool isCurrentAbFull(bool warn) {
     return current.isFull(warn);
-  }
-
-  bool allInitialized() {
-    return _everPulledProfiles &&
-        addressbooks.values.every((e) => e.initialized);
   }
 
   void _refreshTab() {
@@ -936,14 +920,12 @@ abstract class BaseAb {
   final pullError = "".obs;
   final pushError = "".obs;
   final abLoading = false.obs;
-  var initialized = false;
 
   reset() {
     pullError.value = '';
     pushError.value = '';
     tags.clear();
     peers.clear();
-    initialized = false;
   }
 
   String name();
@@ -955,20 +937,25 @@ abstract class BaseAb {
 
   Future<void> pullAb({force = true, quiet = false}) async {
     if (abLoading.value) return;
-    if (!force && initialized) return;
     if (!quiet) {
       abLoading.value = true;
       pullError.value = "";
     }
     final ret = pullAbImpl(force: force, quiet: quiet);
     abLoading.value = false;
-    initialized = true;
     return ret;
   }
 
   Future<void> pullAbImpl({force = true, quiet = false});
 
-  Future<String?> addPeers(List<Peer> ps, bool syncPassword);
+  Future<String?> addPeers(List<Map<String, dynamic>> ps);
+  removeHash(Map<String, dynamic> p) {
+    p.remove('hash');
+  }
+
+  removePassword(Map<String, dynamic> p) {
+    p.remove('password');
+  }
 
   Future<bool> changeTagForPeers(List<String> ids, List<dynamic> tags);
 
@@ -1095,7 +1082,6 @@ class LegacyAb extends BaseAb {
       {bool toastIfFail = true, bool toastIfSucc = true}) async {
     debugPrint("pushAb: toastIfFail:$toastIfFail, toastIfSucc:$toastIfSucc");
     if (!gFFI.userModel.isLogin) return false;
-    if (!initialized) return false;
     pushError.value = '';
     bool ret = false;
     try {
@@ -1145,16 +1131,17 @@ class LegacyAb extends BaseAb {
 
 // #region Peer
   @override
-  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
+  Future<String?> addPeers(List<Map<String, dynamic>> ps) async {
     bool full = false;
     for (var p in ps) {
       if (!isFull(false)) {
-        p.password = ''; // legacy ab ignore password
-        final index = peers.indexWhere((e) => e.id == p.id);
+        p.remove('password'); // legacy ab ignore password
+        final index = peers.indexWhere((e) => e.id == p['id']);
         if (index >= 0) {
-          _merge(p, peers[index]);
+          _merge(Peer.fromJson(p), peers[index]);
+          _mergePeerFromGroup(peers[index]);
         } else {
-          peers.add(p);
+          peers.add(Peer.fromJson(p));
         }
       } else {
         full = true;
@@ -1167,6 +1154,20 @@ class LegacyAb extends BaseAb {
       return translate("exceed_max_devices");
     } else {
       return null;
+    }
+  }
+
+  _mergePeerFromGroup(Peer p) {
+    final g = gFFI.groupModel.peers.firstWhereOrNull((e) => p.id == e.id);
+    if (g == null) return;
+    if (p.username.isEmpty) {
+      p.username = g.username;
+    }
+    if (p.hostname.isEmpty) {
+      p.hostname = g.hostname;
+    }
+    if (p.platform.isEmpty) {
+      p.platform = g.platform;
     }
   }
 
@@ -1225,6 +1226,7 @@ class LegacyAb extends BaseAb {
     }
     if (needSync) {
       await pushAb(toastIfSucc: false, toastIfFail: false);
+      gFFI.abModel._refreshTab();
     }
     // Pull cannot be used for sync to avoid cyclic sync.
   }
@@ -1541,27 +1543,25 @@ class Ab extends BaseAb {
 
 // #region Peers
   @override
-  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
+  Future<String?> addPeers(List<Map<String, dynamic>> ps) async {
     try {
       final api =
           "${await bind.mainGetApiServer()}/api/ab/peer/add/${profile.guid}";
       var headers = getHttpHeaders();
       headers['Content-Type'] = "application/json";
       for (var p in ps) {
-        if (peers.firstWhereOrNull((e) => e.id == p.id) != null) {
+        if (peers.firstWhereOrNull((e) => e.id == p['id']) != null) {
           continue;
         }
         if (isFull(false)) {
           return translate("exceed_max_devices");
         }
-        String body;
         if (personal) {
-          p.password = '';
-          body = jsonEncode(p.toPersonalAbUploadJson(syncPassword));
+          removePassword(p);
         } else {
-          p.hash = '';
-          body = jsonEncode(p.toSharedAbUploadJson(syncPassword));
+          removeHash(p);
         }
+        String body = jsonEncode(p);
         final resp =
             await http.post(Uri.parse(api), headers: headers, body: body);
         final errMsg = _jsonDecodeActionResp(resp);
@@ -1645,6 +1645,7 @@ class Ab extends BaseAb {
   @override
   Future<bool> changePersonalHashPassword(String id, String hash) async {
     if (!personal) return false;
+    if (!peers.any((e) => e.id == id)) return false;
     return _setPassword({"id": id, "hash": hash});
   }
 
@@ -1688,13 +1689,13 @@ class Ab extends BaseAb {
     }
 
     try {
+      /* Remove this because IDs that are not on the server can't be synced, then sync will happen every startup.
       // Try add new peers to personal ab
       if (personal) {
         for (var r in recents) {
           if (peers.length < gFFI.abModel._maxPeerOneAb) {
-            if (peers.every((e) => e.id != r.id)) {
-              // only sync personal password
-              var err = await addPeers([r], personal);
+            if (!peers.any((e) => e.id == r.id)) {
+              var err = await addPeers([r.toPersonalAbUploadJson(true)]);
               if (err == null) {
                 peers.add(r);
                 uiUpdate = true;
@@ -1703,6 +1704,7 @@ class Ab extends BaseAb {
           }
         }
       }
+      */
       final syncPeers = peers.where((p0) => p0.sameServer != true);
       for (var p in syncPeers) {
         Peer? r = recents.firstWhereOrNull((e) => e.id == p.id);
@@ -1854,7 +1856,7 @@ class Ab extends BaseAb {
 // DummyAb is for current ab is null
 class DummyAb extends BaseAb {
   @override
-  Future<String?> addPeers(List<Peer> ps, bool syncPassword) async {
+  Future<String?> addPeers(List<Map<String, dynamic>> ps) async {
     return "Unreachable";
   }
 

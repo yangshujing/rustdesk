@@ -1939,11 +1939,17 @@ void addPeersToAbDialog(
         return;
       }
       isInProgress.value = true;
-      final addToPersonal =
-          gFFI.abModel.addressbooks[currentName.value]?.isPersonal();
-      final syncPasswordOrHash = addToPersonal ?? false;
-      final errMsg = await gFFI.abModel
-          .addPeersTo(peers, currentName.value, syncPasswordOrHash);
+      final mapList = peers.map((e) {
+        var json = e.toJson();
+        // remove shared password when add to other address book
+        json.remove('password');
+        if (gFFI.abModel.addressbooks[currentName.value]?.isPersonal() !=
+            true) {
+          json.remove('hash');
+        }
+        return json;
+      }).toList();
+      final errMsg = await gFFI.abModel.addPeersTo(mapList, currentName.value);
       isInProgress.value = false;
       if (errMsg == null) {
         showToast(translate('Successful'));
@@ -2040,6 +2046,13 @@ void setSharedAbPasswordDialog(String abName, Peer peer) {
               obscureText: true,
               autofocus: true,
             ),
+            Row(children: [
+              Icon(Icons.info, color: Colors.amber).marginOnly(right: 4),
+              Text(
+                translate('share_warning_tip'),
+                style: TextStyle(fontSize: 12),
+              )
+            ]).marginSymmetric(vertical: 10),
             // NOT use Offstage to wrap LinearProgressIndicator
             isInProgress.value ? const LinearProgressIndicator() : Offstage()
           ])),

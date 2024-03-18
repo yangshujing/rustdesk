@@ -1859,15 +1859,17 @@ impl LoginConfigHandler {
         }
         #[cfg(feature = "flutter")]
         {
-            // sync ab password with PeerConfig password
-            let password = base64::encode(config.password.clone(), base64::Variant::Original);
-            let evt: HashMap<&str, String> = HashMap::from([
-                ("name", "sync_peer_password_to_ab".to_string()),
-                ("id", self.id.clone()),
-                ("password", password),
-            ]);
-            let evt = serde_json::ser::to_string(&evt).unwrap_or("".to_owned());
-            crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, evt);
+            if remember && !config.password.is_empty() {
+                // sync ab password with PeerConfig password
+                let password = base64::encode(config.password.clone(), base64::Variant::Original);
+                let evt: HashMap<&str, String> = HashMap::from([
+                    ("name", "sync_peer_password_to_ab".to_string()),
+                    ("id", self.id.clone()),
+                    ("password", password),
+                ]);
+                let evt = serde_json::ser::to_string(&evt).unwrap_or("".to_owned());
+                crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, evt);
+            }
         }
         if config.keyboard_mode.is_empty() {
             if is_keyboard_mode_supported(

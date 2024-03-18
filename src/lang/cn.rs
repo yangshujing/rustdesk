@@ -603,9 +603,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Read-only", "只读"),
         ("Read/Write", "读写"),
         ("Full Control", "完全控制"),
-        ("full-control-tip", "完全控制赋予其他人与地址簿所有者相同的权限。"),
-        ("share-warning-tip", "上述字段是共享的并且对其他人可见。"),
+        ("full_control_tip", "完全控制赋予其他人与地址簿所有者相同的权限。"),
+        ("share_warning_tip", "上述字段是共享的并且对其他人可见。"),
         ("Only show existing", "只显示存在的"),
         ("Everyone", "所有人"),
+        ("permission_priority_tip", "权限优先级：用户>组>所有人"),
     ].iter().cloned().collect();
 }

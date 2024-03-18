@@ -588,8 +588,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Please select the session you want to connect to", "Seleziona la sessione a cui connetterti"),
         ("powered_by_me", "Alimentato da RustDesk"),
         ("outgoing_only_desk_tip", "Questa è un'edizione personalizzata.\nPuoi connetterti ad altri dispositivi, ma gli altri dispositivi non possono connettersi a questo dispositivo."),
-        ("preset_password_warning", "Questa edizione personalizzata viene fornita con una password preimpostata. Chiunque conosca questa password potrebbe ottenere il pieno controllo del dispositivo. Se non te lo aspettavi, disinstalla immediatamente il software."),
-        ("Security Alert", ""),
         ("preset_password_warning", ""),
         ("Security Alert", ""),
         ("Add shared address book", ""),
@@ -605,9 +603,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Read-only", ""),
         ("Read/Write", ""),
         ("Full Control", ""),
-        ("full-control-tip", ""),
-        ("share-warning-tip", ""),
+        ("full_control_tip", ""),
+        ("share_warning_tip", ""),
         ("Only show existing", ""),
         ("Everyone", ""),
+        ("permission_priority_tip", ""),
     ].iter().cloned().collect();
 }

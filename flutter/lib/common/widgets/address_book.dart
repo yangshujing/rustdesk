@@ -547,7 +547,7 @@ class _AddressBookState extends State<AddressBook> {
               Row(children: [
                 Icon(Icons.info, color: Colors.amber).marginOnly(right: 4),
                 Text(
-                  translate('share-warning-tip'),
+                  translate('share_warning_tip'),
                   style: TextStyle(fontSize: 12),
                 )
               ]).marginSymmetric(vertical: 10),
@@ -799,6 +799,15 @@ class _AddressBookState extends State<AddressBook> {
       return CustomAlertDialog(
         content: _RuleTree(),
         actions: [
+          Row(children: [
+            Icon(Icons.info, color: MyTheme.accent).marginOnly(right: 4),
+            Expanded(
+              child: Text(
+                translate('permission_priority_tip'),
+                style: TextStyle(fontSize: 12),
+              ),
+            )
+          ]),
           dialogButton(
             "Close",
             icon: Icon(Icons.close_rounded),
@@ -1126,25 +1135,24 @@ class __RuleTreeState extends State<_RuleTree> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        isDesktop
-            ? Row(
-                children: [
-                  switchWidget,
-                  switchLabel,
-                  searchTextField,
-                ],
-              )
-            : Column(
-                children: [
-                  Row(
-                    children: [
-                      switchWidget,
-                      switchLabel,
-                    ],
-                  ),
-                  searchTextField,
-                ],
-              ),
+        if (isDesktop)
+          Row(
+            children: [
+              switchWidget,
+              Expanded(child: switchLabel),
+              searchTextField
+            ],
+          ),
+        if (!isDesktop)
+          Row(
+            children: [
+              switchWidget,
+              Expanded(child: switchLabel),
+            ],
+          ),
+        if (!isDesktop) SizedBox(height: 40, child: searchTextField),
+        // NOT use Offstage to wrap LinearProgressIndicator
+        isInProgress ? const LinearProgressIndicator() : Offstage(),
         SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: SingleChildScrollView(
@@ -1157,8 +1165,6 @@ class __RuleTreeState extends State<_RuleTree> {
             ),
           ),
         ),
-        // NOT use Offstage to wrap LinearProgressIndicator
-        isInProgress ? const LinearProgressIndicator() : Offstage(),
       ],
     );
   }
@@ -1347,7 +1353,7 @@ void _addOrUpdateRuleDialog(
                   Icon(Icons.warning_amber, color: Colors.amber)
                       .marginOnly(right: 10),
                   Flexible(
-                      child: Text(translate('full-control-tip'),
+                      child: Text(translate('full_control_tip'),
                           style: TextStyle(fontSize: 12))),
                 ],
               ).marginSymmetric(vertical: 10),
