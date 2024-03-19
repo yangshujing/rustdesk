@@ -595,7 +595,8 @@ class AbModel {
     currentAbPeers.refresh();
     _refreshTab();
     _saveCache();
-    if (current.isPersonal()) {
+    if (legacyMode.value && current.isPersonal()) {
+      // non-legacy mode not add peers automatically
       Future.delayed(Duration(seconds: 2), () async {
         if (!shouldSyncAb()) return;
         var hasSynced = false;
