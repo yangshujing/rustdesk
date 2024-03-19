@@ -1105,24 +1105,22 @@ class __RuleTreeState extends State<_RuleTree> {
         });
     Widget switchLabel =
         _text(translate('Only show existing')).marginOnly(right: 20);
-    Widget searchTextField = Expanded(
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: translate('Search'),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 6),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          prefixIcon: Icon(Icons.search),
-          filled: true,
+    Widget searchTextField = TextField(
+      decoration: InputDecoration(
+        hintText: translate('Search'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.0),
         ),
-        onChanged: (v) {
-          setState(() {
-            searchText = v;
-          });
-        },
-      ).marginSymmetric(horizontal: 10),
-    );
+        prefixIcon: Icon(Icons.search),
+        filled: true,
+      ),
+      onChanged: (v) {
+        setState(() {
+          searchText = v;
+        });
+      },
+    ).marginSymmetric(horizontal: 10);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -1131,7 +1129,7 @@ class __RuleTreeState extends State<_RuleTree> {
             children: [
               switchWidget,
               Expanded(child: switchLabel),
-              searchTextField
+              Expanded(child: searchTextField),
             ],
           ),
         if (!isDesktop)
@@ -1141,7 +1139,7 @@ class __RuleTreeState extends State<_RuleTree> {
               Expanded(child: switchLabel),
             ],
           ),
-        if (!isDesktop) SizedBox(height: 40, child: searchTextField),
+        if (!isDesktop) searchTextField,
         Row(children: [
           Icon(Icons.info, color: MyTheme.accent, size: 20)
               .marginSymmetric(horizontal: isDesktop ? 10 : 5),
