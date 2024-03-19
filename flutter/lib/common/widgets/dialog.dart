@@ -1916,6 +1916,33 @@ void showWindowsSessionsDialog(
 void addPeersToAbDialog(
   List<Peer> peers,
 ) async {
+  Future<bool> addTo(String abname) async {
+    final mapList = peers.map((e) {
+      var json = e.toJson();
+      // remove shared password when add to other address book
+      json.remove('password');
+      if (gFFI.abModel.addressbooks[abname]?.isPersonal() != true) {
+        json.remove('hash');
+      }
+      return json;
+    }).toList();
+    final errMsg = await gFFI.abModel.addPeersTo(mapList, abname);
+    if (errMsg == null) {
+      showToast(translate('Successful'));
+      return true;
+    } else {
+      BotToast.showText(text: errMsg, contentColor: Colors.red);
+      return false;
+    }
+  }
+
+  // if only one address book and it is personal, add to it directly
+  if (gFFI.abModel.addressbooks.length == 1 &&
+      gFFI.abModel.current.isPersonal()) {
+    await addTo(gFFI.abModel.currentName.value);
+    return;
+  }
+
   RxBool isInProgress = false.obs;
   final names = gFFI.abModel.addressBooksCanWrite();
   RxString currentName = gFFI.abModel.currentName.value.obs;
@@ -1939,24 +1966,10 @@ void addPeersToAbDialog(
         return;
       }
       isInProgress.value = true;
-      final mapList = peers.map((e) {
-        var json = e.toJson();
-        // remove shared password when add to other address book
-        json.remove('password');
-        if (gFFI.abModel.addressbooks[currentName.value]?.isPersonal() !=
-            true) {
-          json.remove('hash');
-        }
-        return json;
-      }).toList();
-      final errMsg = await gFFI.abModel.addPeersTo(mapList, currentName.value);
-      isInProgress.value = false;
-      if (errMsg == null) {
-        showToast(translate('Successful'));
+      if (await addTo(currentName.value)) {
         close();
-      } else {
-        BotToast.showText(text: errMsg, contentColor: Colors.red);
       }
+      isInProgress.value = false;
     }
 
     cancel() {
