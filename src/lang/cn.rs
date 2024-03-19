@@ -607,6 +607,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("share_warning_tip", "上述字段是共享的并且对其他人可见。"),
         ("Only show existing", "只显示存在的"),
         ("Everyone", "所有人"),
-        ("permission_priority_tip", "权限优先级：用户>组>所有人"),
+        ("permission_priority_tip", "优先级：用户>组>所有人"),
     ].iter().cloned().collect();
 }

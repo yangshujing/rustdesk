@@ -799,15 +799,6 @@ class _AddressBookState extends State<AddressBook> {
       return CustomAlertDialog(
         content: _RuleTree(),
         actions: [
-          Row(children: [
-            Icon(Icons.info, color: MyTheme.accent).marginOnly(right: 4),
-            Expanded(
-              child: Text(
-                translate('permission_priority_tip'),
-                style: TextStyle(fontSize: 12),
-              ),
-            )
-          ]),
           dialogButton(
             "Close",
             icon: Icon(Icons.close_rounded),
@@ -1151,6 +1142,17 @@ class __RuleTreeState extends State<_RuleTree> {
             ],
           ),
         if (!isDesktop) SizedBox(height: 40, child: searchTextField),
+        Row(children: [
+          Icon(Icons.info, color: MyTheme.accent, size: 20)
+              .marginSymmetric(horizontal: isDesktop ? 10 : 5),
+          Expanded(
+            child: Text(
+              translate('permission_priority_tip'),
+              style: TextStyle(fontSize: 12),
+              textAlign: TextAlign.left,
+            ),
+          )
+        ]).marginSymmetric(vertical: 6),
         // NOT use Offstage to wrap LinearProgressIndicator
         isInProgress ? const LinearProgressIndicator() : Offstage(),
         SingleChildScrollView(
