@@ -24,7 +24,6 @@ fn main() {
     feature = "flutter"
 )))]
 fn main() {
-    log::error!("yang 6666");
     if !common::global_init() {
         return;
     }
